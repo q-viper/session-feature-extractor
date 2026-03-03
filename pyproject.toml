@@ -1,0 +1,31 @@
+[project]
+name = "session-feature-extractor"
+version = "0.0.1"
+description = "Session Feature Extractor"
+authors = [{ name = "Ramkrishna Acharya" }]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib",
+    "pandas",
+    "opencv-python",
+    "scapy",
+    "loguru",
+    "typer",
+    "pydantic",
+    "numpy<2",
+    "psutil",
+]
+
+[project.urls]
+Homepage = "https://github.com/q-viper/session-feature-extractor"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+"*" = ["*.py"]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
