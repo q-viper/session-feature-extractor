@@ -227,7 +227,6 @@ def show_test_image(image_path: str | None = None):
     import os
 
     import cv2
-
     from dip_sids.utils.vis import subplot_images
 
     if image_path is None:
@@ -270,15 +269,3 @@ def show_test_image(image_path: str | None = None):
 
 if __name__ == "__main__":
     show_test_image()
-
-
-def array_to_image(array, ...):
-    """
-    Convert a numpy array to a grayscale image for visualization.
-
-    Args:
-        array (np.ndarray): Input array to convert.
-    Returns:
-        np.ndarray: Grayscale image.
-    """
-    # ...existing code...
