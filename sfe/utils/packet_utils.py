@@ -1,5 +1,5 @@
-from scapy.all import Ether, IP, TCP, Packet
 import numpy as np
+from scapy.all import IP, TCP, Ether, Packet
 
 
 def anonymize_packet(packet: Packet) -> Packet:

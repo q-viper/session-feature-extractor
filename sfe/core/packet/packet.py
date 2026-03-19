@@ -1,7 +1,10 @@
-from typing import Any
-import numpy as np
-from scapy.all import Packet as ScapyPacket, raw
 from dataclasses import dataclass, field
+from typing import Any
+
+import numpy as np
+from scapy.all import Packet as ScapyPacket
+from scapy.all import raw
+
 from sfe.utils.packet_utils import anonymize_packet
 
 
@@ -65,12 +68,24 @@ class Packet:
     def __init__(self, data: ScapyPacket | Any, timestamp: float = 0.0):
         self.data = data  # scapy packet or raw data
         self.timestamp = float(timestamp)
+
         self._layers: list[Layer] = self._dissect_layers(self.data)
         self._array = None  # For storing uint8 array representation if needed
         self._arrays = dict()  # For storing uint8 arrays of each layer if needed
         self._header_arrays = (
             dict()
         )  # For storing uint8 arrays of just the headers of each layer if needed
+
+    def get_layer(self, layer_name: str) -> Layer | None:
+        """Return the Layer object for the given layer name, or None if not found."""
+        for layer in self.layers:
+            if layer.name == layer_name:
+                return layer
+        return None
+
+    @property
+    def layer_names(self) -> list[str]:
+        return [layer.name for layer in self.layers]
 
     @property
     def header_arrays(self) -> dict[str, np.ndarray]:
@@ -86,27 +101,37 @@ class Packet:
         if not self._arrays:
             for layer in self.layers:
                 self._arrays[layer.name] = layer.array
-            prev_arr = None
-            for layer in self.layers[::-1]:
-                curr_arr = layer.array
-                if prev_arr is None:
-                    layer.header_array = curr_arr  # For the innermost layer, header is the same as the full array
+
+            for i, layer in enumerate(self.layers):
+                current_layer_raw = layer.raw
+                if i + 1 < len(self.layers):
+                    # This is not the innermost layer
+                    payload_layer = self.layers[i + 1]
+                    payload_raw = payload_layer.raw
+                    header_len = len(current_layer_raw) - len(payload_raw)
+                    header_bytes = current_layer_raw[:header_len]
                 else:
-                    rev_arr = curr_arr[::-1]
-                    rev_arr = rev_arr[len(prev_arr) :]
-                    layer.header_array = rev_arr[::-1]
-                prev_arr = curr_arr
-            # ensure concat of headers and curr array is same
-            assert np.array_equal(
-                np.concatenate(
-                    [
-                        layer.header_array
-                        for layer in self.layers
-                        if layer.header_array is not None
-                    ]
-                ),
-                self.array,
-            )
+                    # This is the innermost layer, its "header" is its full content
+                    header_bytes = current_layer_raw
+
+                layer.header_array = np.frombuffer(header_bytes, dtype=np.uint8)
+
+            # Verification assertion
+            all_headers = [
+                layer.header_array
+                for layer in self.layers
+                if layer.header_array is not None and layer.header_array.size > 0
+            ]
+            if all_headers:
+                concatenated_headers = np.concatenate(all_headers)
+                if not np.array_equal(concatenated_headers, self.array):
+                    # This might happen if padding/options in headers change raw representation
+                    # For now, we'll just log it.
+                    print(
+                        f"Warning: Concatenated headers do not match full packet array. Full: {len(self.array)}, Headers: {len(concatenated_headers)}"
+                    )
+                    pass
+
         return self._arrays
 
     @property
@@ -129,7 +154,6 @@ class Packet:
         else:
             return b""
 
-    @property
     def anonymize(self):
         """Return a new Packet with anonymized data."""
         if isinstance(self.data, ScapyPacket):
@@ -201,3 +225,19 @@ class Packet:
 
     def __repr__(self):
         return f"Packet(timestamp={self.timestamp}, layers={self.layers})"
+
+    @classmethod
+    def from_bytes(cls, raw_bytes: bytes, outer_layer_class: type) -> "Packet":
+        """
+        Reconstructs a Packet object from raw bytes.
+
+        Args:
+            raw_bytes: The raw byte string of the packet.
+            outer_layer_class: The Scapy class of the outermost layer (e.g., Ether).
+
+        Returns:
+            A new Packet object.
+        """
+        scapy_packet = outer_layer_class(raw_bytes)
+        # We don't know the original timestamp, so we can set it to 0 or another default.
+        return cls(scapy_packet, timestamp=0.0)

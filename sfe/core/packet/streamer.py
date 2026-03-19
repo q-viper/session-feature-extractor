@@ -1,13 +1,15 @@
-from loguru import logger
-from pathlib import Path
-import subprocess
-import shlex
-import time
-from datetime import datetime, timedelta
 import gc
-import psutil
+import shlex
+import subprocess
+import time
 import traceback
-from scapy.all import rdpcap, PcapReader
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import psutil
+from loguru import logger
+from scapy.all import PcapReader, rdpcap
+
 from sfe.core.packet.packet import Packet
 
 
@@ -37,8 +39,8 @@ class PacketStreamer:
         name: str | None = None,
         temp_dir: Path | None = None,
         store_packets: bool = False,
-        use_editcap: bool = False,
         use_tshark: bool = False,
+        use_editcap: bool = True,
         process_id: int = 0,
         use_apptainer=True,
         container: str = "docker://cincan/tshark",
@@ -52,7 +54,6 @@ class PacketStreamer:
         self.curr_packet = None
         self.curr_packet_time = None
         self.store_packets = store_packets
-        self.use_editcap = use_editcap
         self.use_tshark = use_tshark
         self.all_packets = []
         # if available, use temp dir else create temp in working dir
@@ -64,6 +65,7 @@ class PacketStreamer:
         self.process_id = process_id
         self.first_timestamp = start_timestamp
         self.end_timestamp = end_timestamp
+        self.use_editcap = use_editcap
 
         if not self.pcap_path.exists():
             logger.error(
@@ -71,28 +73,27 @@ class PacketStreamer:
             )
             raise FileNotFoundError(f"PCAP file not found: {self.pcap_path}")
 
-        if self.use_editcap:
-            if self.first_timestamp and self.end_timestamp:
-                logger.info(
-                    f"PROCESS:{self.process_id} PacketStreamer initializing for timestamps between {self.first_timestamp} and {self.end_timestamp}"
+        if self.first_timestamp and self.end_timestamp:
+            logger.info(
+                f"PROCESS:{self.process_id} PacketStreamer initializing for timestamps between {self.first_timestamp} and {self.end_timestamp}"
+            )
+            split_path = self.temp_dir / f"{self.temp_name}_split.pcap"
+            # now split the pcap to only include packets between these timestamps
+            ret_code = self.split_session(
+                self.first_timestamp,
+                self.end_timestamp,
+                initial_split=True,
+                split_path=split_path,
+            )
+            if not ret_code:
+                logger.error(
+                    f"PROCESS:{self.process_id} Failed to initialize PacketStreamer with editcap splitting."
                 )
-                split_path = self.temp_dir / f"{self.temp_name}_split.pcap"
-                # now split the pcap to only include packets between these timestamps
-                ret_code = self.split_session(
-                    self.first_timestamp,
-                    self.end_timestamp,
-                    initial_split=True,
-                    split_path=split_path,
-                )
-                if not ret_code:
-                    logger.error(
-                        f"PROCESS:{self.process_id} Failed to initialize PacketStreamer with editcap splitting."
-                    )
-                    raise RuntimeError("Failed to split pcap with editcap.")
-                logger.info(
-                    f"PROCESS:{self.process_id} Successfully initialized PacketStreamer with editcap splitting and new split file at {split_path}."
-                )
-                self.pcap_path = split_path
+                raise RuntimeError("Failed to split pcap with editcap.")
+            logger.info(
+                f"PROCESS:{self.process_id} Successfully initialized PacketStreamer with editcap splitting and new split file at {split_path}."
+            )
+            self.pcap_path = split_path
 
     def __iter__(self):
         """
