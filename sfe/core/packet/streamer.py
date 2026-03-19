@@ -1,3 +1,10 @@
+"""
+sfe.core.packet.streamer
+-----------------------
+
+PacketStreamer for iterating over packets in a PCAP file, with support for filtering and multiprocessing.
+"""
+
 import gc
 import shlex
 import subprocess
@@ -15,9 +22,8 @@ from sfe.core.packet.packet import Packet
 
 class PacketStreamer:
     """
-    Streams and processes packets from a PCAP file, with support for filtering by time, IP, and port.
-    Utilizes editcap and tshark for efficient filtering, with fallback to Scapy if needed.
-    Handles temporary file management and memory-aware reading for large PCAPs.
+    Streams packets from a PCAP file, optionally filtering by time, IP, and port.
+    Supports multiprocessing and containerized packet extraction.
 
     Args:
         pcap_path (Path): Path to the input PCAP file.
@@ -47,6 +53,22 @@ class PacketStreamer:
         start_timestamp: float | None = None,
         end_timestamp: float | None = None,
     ):
+        """
+        Initialize the PacketStreamer with PCAP path and filtering options.
+
+        Args:
+            pcap_path (Path): Path to the input PCAP file.
+            name (str, optional): Name for the temporary files/session.
+            temp_dir (Path, optional): Directory for temporary files.
+            store_packets (bool): Whether to store all packets in memory.
+            use_editcap (bool): Use editcap for splitting/filtering.
+            use_tshark (bool): Use tshark for advanced filtering.
+            process_id (int): Identifier for the process/session.
+            use_apptainer (bool): Use apptainer container for editcap/tshark.
+            container (str): Container image to use for apptainer.
+            start_timestamp (float, optional): Start time for filtering.
+            end_timestamp (float, optional): End time for filtering.
+        """
         self.use_apptainer = use_apptainer
         self.container = container
         self.pcap_path = pcap_path
@@ -395,8 +417,7 @@ class PacketStreamer:
 
     def cleanup(self):
         """
-        Cleanup temporary files created during packet processing.
-        Deletes the temp pcap file if it exists.
+        Clean up any temporary files or resources used by the streamer.
         """
         if self.temp_path.exists():
             self.temp_path.unlink()

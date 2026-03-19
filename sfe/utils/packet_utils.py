@@ -1,3 +1,10 @@
+"""
+sfe.utils.packet_utils
+----------------------
+
+Utility functions for packet manipulation, conversion, and analysis.
+"""
+
 import numpy as np
 from scapy.all import IP, TCP, Ether, Packet
 
@@ -56,6 +63,17 @@ def get_each_layer(packet: Packet):
 
 
 def session_to_layer_arrays(parsed_session: list[Packet]):
+    """
+    Convert a parsed session (list of packets) into a structured format
+    where each layer of the packet is represented as a separate array.
+
+    Args:
+        parsed_session (list[Packet]): A list of parsed packets.
+
+    Returns:
+        dict: A dictionary where each key is a layer name and the value is
+              an array of the layer's data across all packets in the session.
+    """
     layer_dicts = []
     max_len = 0
     layer_names = set()

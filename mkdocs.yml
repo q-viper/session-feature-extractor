@@ -1,0 +1,69 @@
+site_name: Session Feature Extractor
+site_description: Session-based Feature Extraction and Visualization from PCAPs
+site_author: Ramkrishna Acharya
+site_url: https://q-viper.github.io/session-feature-extractor
+
+repo_name: q-viper/session-feature-extractor
+repo_url: https://github.com/q-viper/session-feature-extractor
+
+copyright: Copyright &copy; 2024 Ramkrishna Acharya
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.top
+    - search.suggest
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [.] 
+          options:
+            docstring_style: google
+            show_source: false
+            show_root_heading: true
+            show_root_full_path: false
+            members_order: source
+            heading_level: 2
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Examples: examples.md
+  - Configuration: configuration.md
+  - CLI Reference: cli.md
+  - API Reference: api.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/q-viper
+  generator: false

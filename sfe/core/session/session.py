@@ -1,3 +1,10 @@
+"""
+sfe.core.session.session
+-----------------------
+
+Session aggregation and array/image conversion utilities for network traffic analysis.
+"""
+
 from dataclasses import dataclass
 
 import numpy as np
@@ -8,6 +15,10 @@ from sfe.core.packet import Packet
 
 @dataclass
 class Session:
+    """
+    Represents a network session, aggregating packets and providing array/image conversion.
+    """
+
     index: int
     start_time: pd.Timestamp
     end_time: pd.Timestamp
@@ -21,8 +32,51 @@ class Session:
     _header_arrays: np.ndarray | None = None
     all_layer_names: list[str] | None = None
 
+    def __init__(
+        self,
+        index: int,
+        start_time: pd.Timestamp,
+        end_time: pd.Timestamp,
+        packets: list[Packet],
+        interval: float,
+        raw_bytes: list[bytearray],
+        filename: str | None = None,
+        label: str = "NORMAL",
+    ):
+        """
+        Initialize a Session object from a list of packets and metadata.
+
+        Args:
+            index: Session index.
+            start_time: Start time of the session.
+            end_time: End time of the session.
+            packets: List of packets in the session.
+            interval: Time interval between packets.
+            raw_bytes: Raw byte data of the packets.
+            filename: Optional filename associated with the session.
+            label: Optional label for the session (default is "NORMAL").
+        """
+        self.index = index
+        self.start_time = start_time
+        self.end_time = end_time
+        self.packets = packets
+        self.interval = interval
+        self.raw_bytes = raw_bytes
+        self.filename = filename
+        self.label = label
+
     @classmethod
     def from_packets(cls, packets: list[Packet], index: int = 0) -> "Session":
+        """
+        Create a Session from a list of Packet objects.
+
+        Args:
+            packets: List of Packet objects.
+            index: Optional index for the session (default is 0).
+
+        Returns:
+            A new Session object.
+        """
         if not packets:
             raise ValueError("No packets provided")
 
@@ -170,7 +224,7 @@ class Session:
         original_lengths: list[int] = None,
     ) -> "Session":
         """
-        Reconstructs a Session object from a numpy array.
+        Reconstruct a Session from a numpy array and metadata.
 
         Args:
             session_array: A 2D numpy array where each row is a packet.

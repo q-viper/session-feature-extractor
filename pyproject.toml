@@ -9,13 +9,21 @@ dependencies = [
     "matplotlib",
     "pandas",
     "opencv-python",
-    "scapy",
+    "scapy==2.7.0",
     "loguru",
     "typer",
     "pydantic",
     "numpy<2",
     "psutil",
     "tqdm",
+]
+
+[project.optional-dependencies]
+docs = [
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocstrings",
+    "mkdocstrings-python"
 ]
 
 [project.urls]

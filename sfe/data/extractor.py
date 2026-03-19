@@ -1,3 +1,10 @@
+"""
+sfe.data.extractor
+------------------
+
+Session feature extraction pipeline for PCAP files. Handles batch processing, multiprocessing, and feature/image extraction for network sessions.
+"""
+
 import gc
 import sys
 import traceback
@@ -19,6 +26,12 @@ from ..core.session.session import Session
 
 
 class PCAPSessionFeatureExtractor:
+    """
+    Extracts session-based features from PCAP files, including array and image representations.
+
+    Handles loading, filtering, and processing of network sessions, and supports saving results as images, arrays, and CSVs.
+    """
+
     def __init__(
         self,
         process_id: int,
@@ -39,6 +52,28 @@ class PCAPSessionFeatureExtractor:
         column_mapping: ColumnMapping = ColumnMapping(),
         write_session_pcap: bool = False,
     ):
+        """
+        Initialize the session feature extractor.
+
+        Args:
+            process_id (int): Process ID for multiprocessing.
+            out_dir (Path): Output directory for results.
+            anynomize (bool): Whether to anonymize packets.
+            max_sessions (int): Maximum number of sessions to process.
+            correction_msec (float): Timestamp correction in microseconds.
+            write_every (int): Save every N sessions.
+            min_labeled_pkts (int): Minimum labeled packets per session.
+            max_labeled_pkts (int): Maximum labeled packets per session.
+            adaptive_correction_msec (bool): Adaptive timestamp correction.
+            temp_dir (Path): Temporary directory.
+            use_apptainer (bool): Use Apptainer for containerization.
+            container (str): Container image.
+            use_tshark (bool): Use Tshark for packet parsing.
+            write_image (bool): Save session images.
+            write_array (bool): Save session arrays.
+            column_mapping (ColumnMapping): Column mapping for CSVs.
+            write_session_pcap (bool): Save session PCAPs.
+        """
         self.use_tshark = use_tshark
         self.container = container
         self.use_apptainer = use_apptainer
@@ -67,7 +102,13 @@ class PCAPSessionFeatureExtractor:
         self.write_session_pcap = write_session_pcap
 
     def load(self, pcap_path: Path, label_df: pd.DataFrame):
-        """Load packets from the PCAP file."""
+        """
+        Load packets from the PCAP file and prepare for session extraction.
+
+        Args:
+            pcap_path (Path): Path to the PCAP file.
+            label_df (pd.DataFrame): DataFrame with session/label information.
+        """
         self.pcap_path = pcap_path
         self.label_df = label_df
         logger.info(
@@ -108,9 +149,18 @@ class PCAPSessionFeatureExtractor:
 
     def packets_to_labelled_sessions(
         self,
-        packet_streamer: PacketStreamer,
+        packet_streamer: "PacketStreamer",
         df: pd.DataFrame = pd.DataFrame(),
     ):
+        """
+        Match packets to labeled sessions and return session objects.
+
+        Args:
+            packet_streamer (PacketStreamer): Streamer for reading packets.
+            df (pd.DataFrame): DataFrame with session/label information.
+        Returns:
+            list[Session]: List of session objects with matched packets.
+        """
         labelled_sessions = []
         file_path = self.pcap_path
 
@@ -336,13 +386,12 @@ class PCAPSessionFeatureExtractor:
 
     def extract_session_features(self, session_bytes):
         """
-        Extract first N bytes from first M packets of a session
+        Extract grayscale array features from session packet bytes.
 
         Args:
-            session_bytes (list): List of pkt bytes session
-
+            session_bytes (list): List of packet bytes for a session.
         Returns:
-            tuple: (8x128 grayscale array, 8x128 byte sequence array)
+            np.ndarray: 2D grayscale array representing the session.
         """
         max_packets = len(session_bytes)
         bytes_per_packet = max([len(byt) for byt in session_bytes])
@@ -382,10 +431,14 @@ class PCAPSessionFeatureExtractor:
 
         return grayscale_data
 
-    def normalized_features(self, packets: list[Packet]):
+    def normalized_features(self, packets: list["Packet"]):
         """
-        Based on: ByteStack‑ID: Integrated Stacked Model Leveraging Payload Byte Frequency for Grayscale Image‑based Network Intrusion Detection
-        NOTE: frequency distribution-based packet-level **PAYLOAD** to image generation
+        Generate normalized byte frequency image for session payloads.
+
+        Args:
+            packets (list[Packet]): List of packets in the session.
+        Returns:
+            np.ndarray: 2D normalized byte frequency image.
         """
         num_pkts = len(packets)
         image = np.zeros((num_pkts, 256), dtype=np.float32)
@@ -422,6 +475,9 @@ class PCAPSessionFeatureExtractor:
         return image
 
     def extract_sessions(self):
+        """
+        Extract sessions from loaded packets and return session objects.
+        """
         if not self.packet_buffer:
             logger.warning("No packets found in the PCAP file.")
             return
@@ -438,8 +494,13 @@ class PCAPSessionFeatureExtractor:
 
         return self.sessions
 
-    def sessions_to_image(self, sessions: list[Session]):
-        """Convert sessions to grayscale images and save them."""
+    def sessions_to_image(self, sessions: list["Session"]):
+        """
+        Convert session objects to grayscale images and save them.
+
+        Args:
+            sessions (list[Session]): List of session objects.
+        """
         if not sessions:
             return
         # Use sequential processing for small batches
@@ -465,9 +526,13 @@ class PCAPSessionFeatureExtractor:
                             f"PROCESS:{self.process_id} Found new layer: {layer}. Total unique layers so far: {len(self.layer_names) + 1}"
                         )
                         self.layer_names.add(layer)
-                # write layer_arrays to npy array with keys
-                npy_pth = str(image_dir).replace(".png", ".npy")
-                np.save(npy_pth, layer_arrays)
+                # write layer_arrays to npz array with keys
+                npz_pth = str(image_dir).replace(".png", ".npz")
+                layer_arrays["layer_order"] = session.all_layer_names
+                np.savez_compressed(npz_pth, **layer_arrays)
+
+                # remove layer_order
+                del layer_arrays["layer_order"]
                 del layer_arrays
             if self.write_image:
                 # Extract features
@@ -496,7 +561,9 @@ class PCAPSessionFeatureExtractor:
         gc.collect()
 
     def run(self):
-        """Run the feature extraction and session processing."""
+        """
+        Run the feature extraction and session processing pipeline.
+        """
         # Load packets from PCAP file
         if self.packet_streamer is None:
             self.load()
@@ -536,6 +603,24 @@ def run_extractor(
     write_image: bool = False,
     column_mapping: ColumnMapping = ColumnMapping(),
 ):
+    """
+    Multiprocessing entry point for session feature extraction.
+
+    Args:
+        process_id (int): Process ID for multiprocessing.
+        pcap_path (Path): Path to the PCAP file.
+        label_df (pd.DataFrame): DataFrame with session/label information.
+        out_dir (Path): Output directory for results.
+        min_labeled_pkts (int): Minimum labeled packets per session.
+        max_labeled_pkts (int): Maximum labeled packets per session.
+        temp_dir (Path): Temporary directory.
+        use_apptainer (bool): Use Apptainer for containerization.
+        container (str): Container image.
+        use_tshark (bool): Use Tshark for packet parsing.
+        write_array (bool): Save session arrays.
+        write_image (bool): Save session images.
+        column_mapping (ColumnMapping): Column mapping for CSVs.
+    """
     extractor = PCAPSessionFeatureExtractor(
         out_dir=out_dir,
         write_every=1,

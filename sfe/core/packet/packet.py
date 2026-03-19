@@ -1,3 +1,10 @@
+"""
+sfe.core.packet.packet
+---------------------
+
+Packet and layer extraction utilities for network session analysis.
+"""
+
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -10,6 +17,10 @@ from sfe.utils.packet_utils import anonymize_packet
 
 @dataclass
 class Layer:
+    """
+    Represents a protocol layer in a network packet.
+    """
+
     name: str
     fields: dict = field(default_factory=dict)
     payload: "Layer" = None
@@ -63,9 +74,18 @@ class Layer:
 
 
 class Packet:
-    """Represents a network packet, recursively wrapping scapy layers as Layer objects."""
+    """
+    Represents a network packet with methods for array extraction and reconstruction.
+    """
 
     def __init__(self, data: ScapyPacket | Any, timestamp: float = 0.0):
+        """
+        Initialize a Packet object from raw bytes or scapy packet.
+
+        Args:
+            data: Scapy packet or raw data.
+            timestamp: Timestamp of the packet, default is 0.0.
+        """
         self.data = data  # scapy packet or raw data
         self.timestamp = float(timestamp)
 
