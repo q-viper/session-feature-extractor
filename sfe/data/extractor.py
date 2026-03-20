@@ -516,27 +516,28 @@ class PCAPSessionFeatureExtractor:
             image_dir = self.out_dir / "session_images" / img_name
             if not image_dir.parent.exists():
                 image_dir.parent.mkdir(parents=True)
-
+            grayscale_array = self.extract_session_features(session.raw_bytes)
             if self.write_array:
-                layer_arrays = session.header_arrays
-                layer_names = layer_arrays.keys()
+                header_arrays = session.header_arrays
+                layer_names = header_arrays.keys()
                 for layer in layer_names:
                     if layer not in self.layer_names:
                         logger.info(
                             f"PROCESS:{self.process_id} Found new layer: {layer}. Total unique layers so far: {len(self.layer_names) + 1}"
                         )
                         self.layer_names.add(layer)
-                # write layer_arrays to npz array with keys
+                # write header_arrays to npz array with keys
                 npz_pth = str(image_dir).replace(".png", ".npz")
-                layer_arrays["layer_order"] = session.all_layer_names
-                np.savez_compressed(npz_pth, **layer_arrays)
+                header_arrays["layer_order"] = session.all_layer_names
+                header_arrays["session_image"] = grayscale_array
+                np.savez_compressed(npz_pth, **header_arrays)
 
                 # remove layer_order
-                del layer_arrays["layer_order"]
-                del layer_arrays
+                del header_arrays["layer_order"]
+                del header_arrays["session_image"]
+                del header_arrays
             if self.write_image:
                 # Extract features
-                grayscale_array = self.extract_session_features(session.raw_bytes)
                 normalized_array = self.normalized_features(session.packets)
                 cv2.imwrite(str(image_dir), grayscale_array)
                 cv2.imwrite(
@@ -544,8 +545,7 @@ class PCAPSessionFeatureExtractor:
                 )
 
                 # write layer arrays as separate images
-                layer_arrays = session.header_arrays
-                for layer, array in layer_arrays.items():
+                for layer, array in header_arrays.items():
                     img_path = str(image_dir).replace(".png", f"_{layer}.png")
                     cv2.imwrite(img_path, array)
 
