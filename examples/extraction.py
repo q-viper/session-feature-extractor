@@ -51,7 +51,7 @@ def main(
         True,
         help="Save each layer as separate array in the npy file. If false, only the full packet bytes will be saved.",
     ),
-    write_image: bool = typer.Option(True, help="Save the session as an image."),
+    write_image: bool = typer.Option(False, help="Save the session as an image."),
     hours_to_subtract: int = typer.Option(
         3, help="Number of hours to subtract from CSV timestamps to match PCAP timing"
     ),
@@ -68,6 +68,9 @@ def main(
         -1,
         help="Maximum number of sessions to process from first row (after filtering)",
     ),
+    dataset_type: str = typer.Option(
+        "ROSIDS",
+        help="Type of dataset to determine column mapping. Options: 'DNP3', 'ROSIDS', 'IEC104'"),
 ):
     """
     Main entry point for batch session extraction from PCAP files using Typer CLI.
@@ -92,7 +95,8 @@ def main(
     log_path = Path(project_dir) / "logs" / "pcap_to_img_mp.log"
     logger.add(log_path)
 
-    column_mapping = ColumnMapping(
+    if 'DNP3' in dataset_type:
+        column_mapping = ColumnMapping(
         timestamp="date",
         flow_duration="duration",
         tot_fwd_pkts="TotalFwdPkts",
@@ -104,9 +108,72 @@ def main(
         protocol="protocol",
         label="Label",
         flow_id="flow ID",
-        flow_label="Label",
         total_pkts="total_pkts",
     )
+    elif 'ROSIDS' in dataset_type:
+        # Flow ID,Src IP,Src Port,Dst IP,Dst Port,Protocol,Timestamp,Flow Duration,
+        # Tot Fwd Pkts,Tot Bwd Pkts,TotLen Fwd Pkts,TotLen Bwd Pkts,Fwd Pkt Len Max,
+        # Fwd Pkt Len Min,Fwd Pkt Len Mean,Fwd Pkt Len Std,Bwd Pkt Len Max,Bwd Pkt Len Min,
+        # Bwd Pkt Len Mean,Bwd Pkt Len Std,Flow Byts/s,Flow Pkts/s,Flow IAT Mean,Flow IAT Std,
+        # Flow IAT Max,Flow IAT Min,Fwd IAT Tot,Fwd IAT Mean,Fwd IAT Std,Fwd IAT Max,Fwd IAT Min,
+        # Bwd IAT Tot,Bwd IAT Mean,Bwd IAT Std,Bwd IAT Max,Bwd IAT Min,Fwd PSH Flags,
+        # Bwd PSH Flags,Fwd URG Flags,Bwd URG Flags,Fwd Header Len,Bwd Header Len,Fwd Pkts/s,
+        # Bwd Pkts/s,Pkt Len Min,Pkt Len Max,Pkt Len Mean,Pkt Len Std,Pkt Len Var,FIN Flag Cnt,
+        # SYN Flag Cnt,RST Flag Cnt,PSH Flag Cnt,ACK Flag Cnt,URG Flag Cnt,CWE Flag Count,
+        # ECE Flag Cnt,Down/Up Ratio,Pkt Size Avg,Fwd Seg Size Avg,Bwd Seg Size Avg,Fwd Byts/b Avg,
+        # Fwd Pkts/b Avg,Fwd Blk Rate Avg,Bwd Byts/b Avg,Bwd Pkts/b Avg,Bwd Blk Rate Avg,
+        # Subflow Fwd Pkts,Subflow Fwd Byts,Subflow Bwd Pkts,Subflow Bwd Byts,Init Fwd Win Byts,
+        # Init Bwd Win Byts,Fwd Act Data Pkts,Fwd Seg Size Min,Active Mean,Active Std,
+        # Active Max,Active Min,Idle Mean,Idle Std,Idle Max,Idle Min,Label
+        column_mapping = ColumnMapping(
+        timestamp="Timestamp",
+        flow_duration="Flow Duration",
+        tot_fwd_pkts="Tot Fwd Pkts",
+        tot_bwd_pkts="Tot Bwd Pkts",
+        src_ip="Src IP",
+        dst_ip="Dst IP",
+        src_port="Src Port",
+        dst_port="Dst Port",
+        protocol="Protocol",
+        label="Label",
+        flow_id="Flow ID",
+        total_pkts="Total Packets",
+    )
+    elif 'IEC104' in dataset_type:
+        # Flow ID,Src IP,Src Port,Dst IP,Dst Port,Protocol,Timestamp,Flow Duration,
+        # Total Fwd Packet,Total Bwd packets,Total Length of Fwd Packet,
+        # Total Length of Bwd Packet,Fwd Packet Length Max,Fwd Packet Length Min,
+        # Fwd Packet Length Mean,Fwd Packet Length Std,Bwd Packet Length Max,Bwd Packet Length Min,
+        # Bwd Packet Length Mean,Bwd Packet Length Std,Flow Bytes/s,Flow Packets/s,Flow IAT Mean,
+        # Flow IAT Std,Flow IAT Max,Flow IAT Min,Fwd IAT Total,Fwd IAT Mean,Fwd IAT Std,
+        # Fwd IAT Max,Fwd IAT Min,Bwd IAT Total,Bwd IAT Mean,Bwd IAT Std,Bwd IAT Max,Bwd IAT Min,
+        # Fwd PSH Flags,Bwd PSH Flags,Fwd URG Flags,Bwd URG Flags,Fwd Header Length,
+        # Bwd Header Length,Fwd Packets/s,Bwd Packets/s,Packet Length Min,Packet Length Max,
+        # Packet Length Mean,Packet Length Std,Packet Length Variance,FIN Flag Count,
+        # SYN Flag Count,RST Flag Count,PSH Flag Count,ACK Flag Count,URG Flag Count,
+        # CWR Flag Count,ECE Flag Count,Down/Up Ratio,Average Packet Size,
+        # Fwd Segment Size Avg,Bwd Segment Size Avg,Fwd Bytes/Bulk Avg,Fwd Packet/Bulk Avg,
+        # Fwd Bulk Rate Avg,Bwd Bytes/Bulk Avg,Bwd Packet/Bulk Avg,Bwd Bulk Rate Avg,
+        # Subflow Fwd Packets,Subflow Fwd Bytes,Subflow Bwd Packets,Subflow Bwd Bytes,
+        # FWD Init Win Bytes,Bwd Init Win Bytes,Fwd Act Data Pkts,Fwd Seg Size Min,
+        # Active Mean,Active Std,
+        # Active Max,Active Min,Idle Mean,Idle Std,Idle Max,Idle Min,Label,source_file
+        column_mapping = ColumnMapping(
+            timestamp="Timestamp",
+            flow_duration="Flow Duration",
+            tot_fwd_pkts="Total Fwd Packet",
+            tot_bwd_pkts="Total Bwd packets",
+            src_ip="Src IP",
+            dst_ip="Dst IP",
+            src_port="Src Port",
+            dst_port="Dst Port",
+            protocol="Protocol",
+            label="Label",
+            flow_id="Flow ID",
+            total_pkts="Total Packets",
+        )
+    else:
+        raise ValueError("Unknown dataset type in data_dir. Please check the column names and update the code accordingly.")
 
     pcap_root = Path(data_dir)
     if out_dir:
@@ -126,13 +193,16 @@ def main(
             temp_dir.mkdir(parents=True, exist_ok=True)
     completed_attacks = []
 
-    pcap_files = list(pcap_root.glob("*.pcap"))
+    pcap_files = list(pcap_root.rglob("*.pcap"))
+    csv_files = list(pcap_root.rglob("*.csv"))
+    csv_mapping = {f.stem: f for f in csv_files}
     mapping_path = pcap_root / "mapping.json"
 
     cpu_cores = max(multiprocessing.cpu_count() - 1, 1)
     if num_processes > 0:
         cpu_cores = min(cpu_cores, num_processes)
     logger.info(f"Using {cpu_cores} CPU cores.")
+    logger.info(f"Found {len(pcap_files)} PCAP files to process in {pcap_root}")
 
     if mapping_path.exists():
         with open(mapping_path, "r") as f:
@@ -156,8 +226,10 @@ def main(
                 f"PCAP file {pcap_file.name} not found in mapping. Skipping."
             )
             continue
-        csv_name = mapping[pcap_file.stem] + ".csv"
-        csv_file = pcap_file.parent / csv_name
+        csv_file = csv_mapping.get(mapping[pcap_file.stem])
+        if not csv_file:
+            logger.warning(f"CSV file not found for {pcap_file.name}")
+            continue
 
         completed_csv_files = list(out_dir.rglob(f"*{atk_name}*csv"))
         completed_df = pd.DataFrame()
@@ -177,8 +249,8 @@ def main(
             continue
         df = pd.read_csv(csv_file)
         df.columns = [c.strip() for c in df.columns]
-
-        df[column_mapping.timestamp] = pd.to_datetime(df[column_mapping.timestamp])
+        ts_format = "%d/%m/%Y %I:%M:%S %p" if dataset_type=='IEC104' else None
+        df[column_mapping.timestamp] = pd.to_datetime(df[column_mapping.timestamp], format=ts_format)
         df[column_mapping.timestamp] = df[column_mapping.timestamp] - pd.Timedelta(
             hours=hours_to_subtract
         )
@@ -189,6 +261,11 @@ def main(
         )
 
         def map_label(x):
+            if dataset_type=='ROSIDS':
+                if x == "No Label":
+                    return "NORMAL"
+                if int(x) == 1:
+                    return atk_name
             return x
 
         df[column_mapping.flow_label] = df[column_mapping.flow_label].apply(map_label)
@@ -232,9 +309,10 @@ def main(
             logger.info(f"Sampled down to {num_rows} sessions for processing.")
         num_rows_per_core = num_rows // cpu_cores
         if num_rows_per_core < 1:
-            raise ValueError(
+            logger.warning(
                 f"Not enough rows ({num_rows}) for the number of CPU cores ({cpu_cores})"
             )
+            continue
         if num_rows % cpu_cores > 0:
             num_rows_per_core += 1
         logger.info(

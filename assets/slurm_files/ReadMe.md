@@ -1,0 +1,3 @@
+- DNP3: https://zenodo.org/records/7348493
+- IEC104: https://zenodo.org/records/15487636
+- ROSIDS23: https://zenodo.org/records/10014434

@@ -172,12 +172,12 @@ class PCAPSessionFeatureExtractor:
                 f"PROCESS:{self.process_id} Filtering sessions with min_labeled_pkts={self.min_labeled_pkts}"
             )
             num_rows = len(df)
-            df = df.query("total_pkts >= @self.min_labeled_pkts")
+            df = df[df[self.column_mapping.total_pkts] >= self.min_labeled_pkts]
             logger.info(
                 f"PROCESS:{self.process_id} Filtered {num_rows - len(df)} sessions"
             )
         if self.max_labeled_pkts > 0:
-            df = df.query("total_pkts <= @self.max_labeled_pkts")
+            df = df[df[self.column_mapping.total_pkts] <= self.max_labeled_pkts]
             logger.info(
                 f"PROCESS:{self.process_id} Filtered {num_rows - len(df)} sessions"
             )
@@ -330,17 +330,18 @@ class PCAPSessionFeatureExtractor:
                     "input_file": file_path.name,
                 }
 
+                
+                if not matched_pkts:
+                    continue
                 # save session info to csv
                 with open(self.label_file, "a") as f:
                     keys = labelled_session.keys()
-                    if f.tell() == 0:  # write header if file is empty
+                    if f.tell() == 0:
                         f.write(",".join(keys) + "\n")
                     # write session info
                     f.write(
                         ",".join([str(labelled_session[key]) for key in keys]) + "\n"
                     )
-                if not matched_pkts:
-                    continue
                 if self.write_session_pcap:
                     # save session packets to a pcap file
                     session_pcap_path = output_path / "session_pcaps"

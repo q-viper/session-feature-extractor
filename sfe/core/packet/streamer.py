@@ -221,31 +221,6 @@ class PacketStreamer:
             pcap_path = self.temp_path
             if initial_split:
                 return True
-            # NOTE: This is clearly slower than editcap then tshark filtering
-            # # now make tshark cmd that filters by src and dst ip if provided aand also implements start and end time
-            # # and write the time taken to find best one
-            # SRC_IP = src_ip
-            # DST_IP = dst_ip
-            # tshark_cmd = f"""tshark -r {str(self.pcap_path)} \
-            # -Y "frame.time >= \\"{start_formatted}\\" && frame.time <= \\"{end_formatted}\\" && ((ip.src == {SRC_IP} && ip.dst == {DST_IP}) || (ip.src == {DST_IP} && ip.dst == {SRC_IP}))" \
-            # -w {self.temp_path}
-            # """
-            # logger.info(
-            #     f"PROCESS:{self.process_id} Running tshark command: {tshark_cmd}"
-            # )
-            # t0 = time.time()
-            # tshark_process = subprocess.run(
-            #     tshark_cmd, shell=True, capture_output=True, text=True
-            # )
-            # t1 = time.time()
-            # logger.info(
-            #     f"PROCESS:{self.process_id} Completed filtering PCAP with tshark. Time taken: {t1 - t0:.2f} seconds"
-            # )
-            # if tshark_process.returncode != 0:
-            #     raise subprocess.CalledProcessError(
-            #         tshark_process.returncode, tshark_cmd, tshark_process.stderr
-            #     )
-
             # use tshark now to filter by src and dst ip if provided
             if (src_ip or dst_ip) and self.use_tshark:
                 # either src==src_ip and dst==dst_ip or src==dst_ip and dst==src_ip
@@ -257,19 +232,21 @@ class PacketStreamer:
                 )
 
                 if self.use_apptainer:
-                    tshark_cmd = f"""apptainer exec --no-home --cleanenv {self.container} tshark -r {str(self.temp_path)} """
-                    tshark_cmd += f"""-Y "(ip.src == {SRC_IP} && ip.dst == {DST_IP}) || (ip.src == {DST_IP} && ip.dst == {SRC_IP})" """
+                    # Build a single filter string for -Y
+                    filter_expr = f"(ip.src == {SRC_IP} && ip.dst == {DST_IP}) || (ip.src == {DST_IP} && ip.dst == {SRC_IP})"
                     if src_port is not None and dst_port is not None:
-                        tshark_cmd += f"""-Y "((tcp.srcport == {src_port} && tcp.dstport == {dst_port}) || (tcp.srcport == {dst_port} && tcp.dstport == {src_port}))" """
-                    tshark_cmd += f"""-w {str(filtered_path)}"""
+                        port_expr = f"((tcp.srcport == {src_port} && tcp.dstport == {dst_port}) || (tcp.srcport == {dst_port} && tcp.dstport == {src_port}))"
+                        filter_expr = f"({filter_expr}) && ({port_expr})"
+                    tshark_cmd = f"apptainer exec --no-home --cleanenv {self.container} tshark -r {str(self.temp_path)} -Y '{filter_expr}' -w {str(filtered_path)}"
                 else:
-                    tshark_cmd = f"""tshark -r {str(self.temp_path)} -Y "(ip.src == {SRC_IP} && ip.dst == {DST_IP}) || (ip.src == {DST_IP} && ip.dst == {SRC_IP})" """
+                    filter_expr = f"(ip.src == {SRC_IP} && ip.dst == {DST_IP}) || (ip.src == {DST_IP} && ip.dst == {SRC_IP})"
                     if src_port is not None and dst_port is not None:
-                        tshark_cmd += f"""-Y "((tcp.srcport == {src_port} && tcp.dstport == {dst_port}) || (tcp.srcport == {dst_port} && tcp.dstport == {src_port}))" """
-                    tshark_cmd += f"""-w {filtered_path}"""
-                # logger.info(
-                #     f"PROCESS:{self.process_id} Running tshark command: {tshark_cmd}"
-                # )
+                        port_expr = f"((tcp.srcport == {src_port} && tcp.dstport == {dst_port}) || (tcp.srcport == {dst_port} && tcp.dstport == {src_port}))"
+                        filter_expr = f"({filter_expr}) && ({port_expr})"
+                    tshark_cmd = f"tshark -r {str(self.temp_path)} -Y '{filter_expr}' -w {str(filtered_path)}"
+                logger.info(
+                    f"PROCESS:{self.process_id} Running tshark command: {tshark_cmd}"
+                )
                 t0 = time.time()
                 tshark_process = subprocess.run(
                     tshark_cmd, capture_output=True, text=True, shell=True
@@ -279,15 +256,20 @@ class PacketStreamer:
                     f"PROCESS:{self.process_id} Completed filtering PCAP with tshark. Time taken: {t1 - t0:.2f} seconds"
                 )
                 if tshark_process.returncode != 0:
-                    logger.error(f"TSHARK FAILED - stderr: {tshark_process.stderr}")
-                    logger.error(f"TSHARK CMD: {' '.join(map(str, tshark_cmd))}")
-                    logger.error(f"TSHARK STDOUT: {tshark_process.stdout}")
-                    raise subprocess.CalledProcessError(
-                        tshark_process.returncode, tshark_cmd, tshark_process.stderr
+                    logger.warning(
+                        f"PROCESS:{self.process_id} TSHARK filtering failed, falling back to Scapy filtering. Error: {tshark_process.stderr}"
                     )
-                # remove the unfiltered temp file
-                self.temp_path.unlink()
-                pcap_path = filtered_path
+                    # logger.error(f"TSHARK FAILED - stderr: {tshark_process.stderr}")
+                    # logger.error(f"TSHARK CMD: {tshark_cmd}")
+                    # logger.error(f"TSHARK STDOUT: {tshark_process.stdout}")
+                    # dont throw error here, just log and fallback to scapy filtering, because tshark can fail due to various reasons like memory issues, malformed packets etc and we dont want to crash the whole process because of that, we can still filter with scapy which is slower but more robust
+                    # raise subprocess.CalledProcessError(
+                    #     tshark_process.returncode, tshark_cmd, tshark_process.stderr
+                    # )
+                else:
+                    # remove the unfiltered temp file
+                    self.temp_path.unlink()
+                    pcap_path = filtered_path
 
             # Read filtered packets from temp file
             # but first check the available memory to avoid crashes
