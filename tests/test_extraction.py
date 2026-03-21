@@ -161,5 +161,6 @@ def test_extraction_creates_images_and_arrays():
                 for key in npz.files:
                     arr = npz[key]
                     assert arr is not None, f"Key {key} in {npz_path} is empty."
+                npz.close()
         finally:
             pass
