@@ -96,11 +96,29 @@ class Packet:
             dict()
         )  # For storing uint8 arrays of just the headers of each layer if needed
 
-    def get_layer(self, layer_name: str) -> Layer | None:
-        """Return the Layer object for the given layer name, or None if not found."""
-        for layer in self.layers:
-            if layer.name == layer_name:
-                return layer
+    def get_layer(self, layer_name: str, is_scapy_layer: bool = False) -> Layer | None:
+        """
+        Return the Layer object for the given custom layer name, or if layer_name is a standard
+        protocol (e.g., 'IP', 'TCP', 'UDP', 'Ether'), return the corresponding Scapy layer from self.data.
+        """
+        if is_scapy_layer:
+            # Handle standard protocol names using Scapy if possible
+            scapy_layer_names = {
+                "IP",
+                "TCP",
+                "UDP",
+                "Ether",
+                "IPv6",
+                "ARP",
+                "ICMP",
+                "Raw",
+            }
+            if layer_name in scapy_layer_names and hasattr(self.data, "getlayer"):
+                return self.data.getlayer(layer_name)
+        else:
+            for layer in self.layers:
+                if layer.name == layer_name:
+                    return layer
         return None
 
     @property

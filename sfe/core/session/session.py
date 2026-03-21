@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from sfe.core.packet import Packet
+from sfe.defs.session_flow import SessionFlow  # noqa
 
 
 @dataclass
@@ -31,6 +32,7 @@ class Session:
     _layer_arrays: np.ndarray | None = None
     _header_arrays: np.ndarray | None = None
     all_layer_names: list[str] | None = None
+    session_flow: SessionFlow = None  # Optional flow-level features
 
     def __init__(
         self,
@@ -42,6 +44,7 @@ class Session:
         raw_bytes: list[bytearray],
         filename: str | None = None,
         label: str = "NORMAL",
+        session_flow: SessionFlow = None,
     ):
         """
         Initialize a Session object from a list of packets and metadata.
@@ -64,35 +67,9 @@ class Session:
         self.raw_bytes = raw_bytes
         self.filename = filename
         self.label = label
+        self.session_flow = session_flow
 
-    @classmethod
-    def from_packets(cls, packets: list[Packet], index: int = 0) -> "Session":
-        """
-        Create a Session from a list of Packet objects.
-
-        Args:
-            packets: List of Packet objects.
-            index: Optional index for the session (default is 0).
-
-        Returns:
-            A new Session object.
-        """
-        if not packets:
-            raise ValueError("No packets provided")
-
-        start_time = min(pkt.timestamp for pkt in packets)
-        end_time = max(pkt.timestamp for pkt in packets)
-        interval = (end_time - start_time) / len(packets)
-
-        return cls(
-            index=index,
-            start_time=start_time,
-            end_time=end_time,
-            packets=packets,
-            interval=interval,
-            raw_bytes=[pkt.raw for pkt in packets],
-        )
-
+    # ---------- Properties ----------
     @property
     def duration(self) -> float:
         return self.end_time - self.start_time
@@ -100,12 +77,6 @@ class Session:
     @property
     def num_packets(self) -> int:
         return len(self.packets)
-
-    def __repr__(self):
-        return (
-            f"Session(start_time={self.start_time}, end_time={self.end_time}, "
-            f"num_packets={self.num_packets}, interval={self.interval})"
-        )
 
     @property
     def array_list(self) -> list[np.ndarray]:
@@ -216,6 +187,35 @@ class Session:
                     self._array[i, : pkt.array.shape[0]] = pkt.array
         return self._array
 
+    # ---------- Class Methods ----------
+    @classmethod
+    def from_packets(cls, packets: list[Packet], index: int = 0) -> "Session":
+        """
+        Create a Session from a list of Packet objects.
+
+        Args:
+            packets: List of Packet objects.
+            index: Optional index for the session (default is 0).
+
+        Returns:
+            A new Session object.
+        """
+        if not packets:
+            raise ValueError("No packets provided")
+
+        start_time = min(pkt.timestamp for pkt in packets)
+        end_time = max(pkt.timestamp for pkt in packets)
+        interval = (end_time - start_time) / len(packets)
+
+        return cls(
+            index=index,
+            start_time=start_time,
+            end_time=end_time,
+            packets=packets,
+            interval=interval,
+            raw_bytes=[pkt.raw for pkt in packets],
+        )
+
     @classmethod
     def from_array(
         cls,
@@ -263,3 +263,10 @@ class Session:
             )
 
         return cls.from_packets(packets)
+
+    # ---------- Instance Methods ----------
+    def __repr__(self):
+        return (
+            f"Session(start_time={self.start_time}, end_time={self.end_time}, "
+            f"num_packets={self.num_packets}, interval={self.interval})"
+        )

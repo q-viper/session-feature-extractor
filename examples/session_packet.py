@@ -51,7 +51,7 @@ def main():
             header_array = curr_arr
         new_header_arrs[layer_name] = header_array
 
-    new_merged_arr = np.concatenate(list(new_header_arrs.values()), axis=-1)
+    # new_merged_arr = np.concatenate(list(new_header_arrs.values()), axis=-1)
     # assert np.array_equal(arr, new_merged_arr)
 
     # --- Packet Reconstruction Example ---
@@ -101,21 +101,15 @@ def main():
     )
     # --- End of Reconstruction Example ---
 
+    # Save session array as image
     cv2.imwrite(str(out_pth / "session_array.png"), arr)
 
-    layer_images = []
-    layer_titles = []
+    # Save header images using subplot_images
     header_images = []
     header_titles = []
     for layer_name, header_arr in header_arrs.items():
         header_images.append(header_arr)
         header_titles.append(layer_name)
-        layer_images.append(layer_arrs[layer_name])
-        layer_titles.append(layer_name)
-
-    subplot_images(
-        layer_images, layer_titles, order=(-1, 1), fig_size=(10, 3), ret_fig=True
-    ).savefig(out_pth / "session_layer_arrays.png")
     subplot_images(
         header_images, header_titles, order=(1, -1), fig_size=(10, 10), ret_fig=True
     ).savefig(out_pth / "session_header_arrays.png")
