@@ -61,6 +61,9 @@ def main(
     max_labeled_pkts: int = typer.Option(
         -1, help="Maximum number of labeled packets to include a session"
     ),
+    max_labeled_pkts_percentile: float = typer.Option(
+        0.9, help="Maximum labeled packets percentile to include a session"
+    ),
     max_samples: int = typer.Option(
         -1,
         help="Maximum number of sessions to process from first row (after filtering)",
@@ -131,8 +134,12 @@ def main(
         cpu_cores = min(cpu_cores, num_processes)
     logger.info(f"Using {cpu_cores} CPU cores.")
 
-    with open(mapping_path, "r") as f:
-        mapping = json.load(f)
+    if mapping_path.exists():
+        with open(mapping_path, "r") as f:
+            mapping = json.load(f)
+    else:
+        # its filename:filename without extension
+        mapping = {f.stem: f.stem for f in pcap_files}
     pcap_files.sort(key=lambda x: x.stat().st_size, reverse=True)
     for idx, pcap_file in enumerate(pcap_files):
         logger.info(f"Processing {pcap_file.name}...")
@@ -184,15 +191,17 @@ def main(
         def map_label(x):
             return x
 
-        df.Label = df.Label.apply(map_label)
+        df[column_mapping.flow_label] = df[column_mapping.flow_label].apply(map_label)
         df[column_mapping.total_pkts] = (
             df[column_mapping.tot_fwd_pkts] + df[column_mapping.tot_bwd_pkts]
         )
 
         _min_labeled_pkts = min_labeled_pkts
         _max_labeled_pkts = max_labeled_pkts
-        if _max_labeled_pkts <= 0:
-            _max_labeled_pkts = df[column_mapping.total_pkts].quantile(0.80)
+        if max_labeled_pkts_percentile > 0:
+            _max_labeled_pkts = df[column_mapping.total_pkts].quantile(
+                max_labeled_pkts_percentile
+            )
 
         logger.info(f"Total sessions in CSV before filtering: {len(df)}")
         if _min_labeled_pkts > 0:
