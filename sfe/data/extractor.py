@@ -535,7 +535,6 @@ class PCAPSessionFeatureExtractor:
                 # remove layer_order
                 del header_arrays["layer_order"]
                 del header_arrays["session_image"]
-                del header_arrays
             if self.write_image:
                 # Extract features
                 normalized_array = self.normalized_features(session.packets)

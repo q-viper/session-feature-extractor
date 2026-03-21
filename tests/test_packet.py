@@ -74,7 +74,7 @@ class TestPacket(unittest.TestCase):
         self.assertTrue(np.array_equal(concatenated_headers, self.sample_packet.array))
 
     def test_anonymize(self):
-        anonymized_packet = self.sample_packet.anonymize
+        anonymized_packet = self.sample_packet.anonymize()
         self.assertIsInstance(anonymized_packet, Packet)
 
         # Check IP anonymization
