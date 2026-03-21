@@ -6,18 +6,17 @@ from a pcap file or a live network interface. It prints out the features for eac
 and saves session images to the temp folder as soon as sessions are found.
 """
 
-from pathlib import Path
-import os
-
-from loguru import logger
-import cv2
-from sfe.core.session.session import Session
-from sfe.data.sniffer import SessionSniffer
-import cv2
-from sfe.vis.plot import subplot_images
 import subprocess
 import threading
 import time
+from pathlib import Path
+
+import cv2
+from loguru import logger
+
+from sfe.core.session.session import Session
+from sfe.data.sniffer import SessionSniffer
+from sfe.vis.plot import subplot_images
 
 try:
     from scapy.arch.windows import get_windows_if_list
