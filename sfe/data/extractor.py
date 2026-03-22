@@ -330,9 +330,8 @@ class PCAPSessionFeatureExtractor:
                     "input_file": file_path.name,
                 }
 
-                
-                if not matched_pkts:
-                    continue
+                # NOTE: We save the session info to a CSV file after processing each session to ensure we have a record of all sessions,
+                # even if the process is interrupted. This also allows us to track progress and debug any issues with specific sessions.
                 # save session info to csv
                 with open(self.label_file, "a") as f:
                     keys = labelled_session.keys()
@@ -342,6 +341,8 @@ class PCAPSessionFeatureExtractor:
                     f.write(
                         ",".join([str(labelled_session[key]) for key in keys]) + "\n"
                     )
+                if not matched_pkts:
+                    continue
                 if self.write_session_pcap:
                     # save session packets to a pcap file
                     session_pcap_path = output_path / "session_pcaps"
