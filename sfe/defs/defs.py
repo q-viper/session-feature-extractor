@@ -27,7 +27,7 @@ class ColumnMapping:
     protocol: str = "Protocol"
     label: str = "Label"
     flow_id: str = "Flow ID"
-    flow_label: str = "Label"
+    flow_label: str = "flow_label"
 
     def __setattr__(self, name, value):
         """
