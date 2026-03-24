@@ -220,7 +220,7 @@ class PCAPSessionFeatureExtractor:
             src_port = row[self.column_mapping.src_port]
             dst_port = row[self.column_mapping.dst_port]
             protocol = row[self.column_mapping.protocol]
-            flow_label = row[self.column_mapping.flow_label]
+            flow_label = row[self.column_mapping.label]
 
             labled_pkts = row[self.column_mapping.total_pkts]
             logger.info(
@@ -558,7 +558,6 @@ class PCAPSessionFeatureExtractor:
         )
 
         # Force garbage collection after processing batch of sessions
-
         gc.collect()
 
     def run(self):
@@ -603,6 +602,7 @@ def run_extractor(
     write_array: bool = False,
     write_image: bool = False,
     column_mapping: ColumnMapping = ColumnMapping(),
+    write_every: int = 100,
 ):
     """
     Multiprocessing entry point for session feature extraction.
@@ -624,7 +624,7 @@ def run_extractor(
     """
     extractor = PCAPSessionFeatureExtractor(
         out_dir=out_dir,
-        write_every=1,
+        write_every=write_every,
         min_labeled_pkts=min_labeled_pkts,
         max_labeled_pkts=max_labeled_pkts,
         process_id=process_id,

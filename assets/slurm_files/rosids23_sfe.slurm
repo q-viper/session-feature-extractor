@@ -38,6 +38,14 @@ apptainer pull cincan_tshark.sif docker://cincan/tshark
 apptainer exec --no-home --cleanenv cincan_tshark.sif tshark --version
 apptainer exec --no-home --cleanenv cincan_tshark.sif editcap --version
 
+# Increase file limits for Tshark
+ulimit -n 65535
+
+# Isolate Apptainer cache to RAM/Temp disk so 64 instances don't lock each other out
+export APPTAINER_CACHEDIR=$TMPDIR/apptainer_cache
+export APPTAINER_TMPDIR=$TMPDIR/apptainer_tmp
+mkdir -p $APPTAINER_CACHEDIR $APPTAINER_TMPDIR
+
 # set number of threads to requested cpus-per-task
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 # for Slurm version >22.05: cpus-per-task has to be set again for srun
@@ -51,7 +59,7 @@ python3 $HOME/dip_sids/session-feature-extractor-main/examples/extraction.py \
     --data-dir "$TMPDIR" \
     --project-dir "$HOME/dip_sids" \
     --out-dir "$OUT_DIR" \
-    --compress-to "$OUT_DIR/session_images.zip" \
+    --compress-to "$DATA_DIR/session_images.zip" \
     --temp-dir "$TMPDIR" \
     --num-processes $SLURM_CPUS_PER_TASK \
     --use-apptainer \

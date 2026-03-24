@@ -62,7 +62,7 @@ def main(
         -1, help="Maximum number of labeled packets to include a session"
     ),
     max_labeled_pkts_percentile: float = typer.Option(
-        0.9, help="Maximum labeled packets percentile to include a session"
+        0.8, help="Maximum labeled packets percentile to include a session"
     ),
     max_samples: int = typer.Option(
         -1,
@@ -70,7 +70,11 @@ def main(
     ),
     dataset_type: str = typer.Option(
         "ROSIDS",
-        help="Type of dataset to determine column mapping. Options: 'DNP3', 'ROSIDS', 'IEC104'"),
+        help="Type of dataset to determine column mapping. Options: 'DNP3', 'ROSIDS', 'IEC104'",
+    ),
+    write_every: int = typer.Option(
+        100, help="Write intermediate results every N sessions"
+    ),
 ):
     """
     Main entry point for batch session extraction from PCAP files using Typer CLI.
@@ -95,22 +99,22 @@ def main(
     log_path = Path(project_dir) / "logs" / "pcap_to_img_mp.log"
     logger.add(log_path)
 
-    if 'DNP3' in dataset_type:
+    if "DNP3" in dataset_type:
         column_mapping = ColumnMapping(
-        timestamp="date",
-        flow_duration="duration",
-        tot_fwd_pkts="TotalFwdPkts",
-        tot_bwd_pkts="TotalBwdPkts",
-        src_ip="source IP",
-        dst_ip="destination IP",
-        src_port="source port",
-        dst_port="destination port",
-        protocol="protocol",
-        label="Label",
-        flow_id="flow ID",
-        total_pkts="total_pkts",
-    )
-    elif 'ROSIDS' in dataset_type:
+            timestamp="date",
+            flow_duration="duration",
+            tot_fwd_pkts="TotalFwdPkts",
+            tot_bwd_pkts="TotalBwdPkts",
+            src_ip="source IP",
+            dst_ip="destination IP",
+            src_port="source port",
+            dst_port="destination port",
+            protocol="protocol",
+            label="Label",
+            flow_id="flow ID",
+            total_pkts="total_pkts",
+        )
+    elif "ROSIDS" in dataset_type:
         # Flow ID,Src IP,Src Port,Dst IP,Dst Port,Protocol,Timestamp,Flow Duration,
         # Tot Fwd Pkts,Tot Bwd Pkts,TotLen Fwd Pkts,TotLen Bwd Pkts,Fwd Pkt Len Max,
         # Fwd Pkt Len Min,Fwd Pkt Len Mean,Fwd Pkt Len Std,Bwd Pkt Len Max,Bwd Pkt Len Min,
@@ -126,20 +130,20 @@ def main(
         # Init Bwd Win Byts,Fwd Act Data Pkts,Fwd Seg Size Min,Active Mean,Active Std,
         # Active Max,Active Min,Idle Mean,Idle Std,Idle Max,Idle Min,Label
         column_mapping = ColumnMapping(
-        timestamp="Timestamp",
-        flow_duration="Flow Duration",
-        tot_fwd_pkts="Tot Fwd Pkts",
-        tot_bwd_pkts="Tot Bwd Pkts",
-        src_ip="Src IP",
-        dst_ip="Dst IP",
-        src_port="Src Port",
-        dst_port="Dst Port",
-        protocol="Protocol",
-        label="Label",
-        flow_id="Flow ID",
-        total_pkts="Total Packets",
-    )
-    elif 'IEC104' in dataset_type:
+            timestamp="Timestamp",
+            flow_duration="Flow Duration",
+            tot_fwd_pkts="Tot Fwd Pkts",
+            tot_bwd_pkts="Tot Bwd Pkts",
+            src_ip="Src IP",
+            dst_ip="Dst IP",
+            src_port="Src Port",
+            dst_port="Dst Port",
+            protocol="Protocol",
+            label="Label",
+            flow_id="Flow ID",
+            total_pkts="Total Packets",
+        )
+    elif "IEC104" in dataset_type:
         # Flow ID,Src IP,Src Port,Dst IP,Dst Port,Protocol,Timestamp,Flow Duration,
         # Total Fwd Packet,Total Bwd packets,Total Length of Fwd Packet,
         # Total Length of Bwd Packet,Fwd Packet Length Max,Fwd Packet Length Min,
@@ -173,7 +177,9 @@ def main(
             total_pkts="Total Packets",
         )
     else:
-        raise ValueError("Unknown dataset type in data_dir. Please check the column names and update the code accordingly.")
+        raise ValueError(
+            "Unknown dataset type in data_dir. Please check the column names and update the code accordingly."
+        )
 
     pcap_root = Path(data_dir)
     if out_dir:
@@ -210,7 +216,7 @@ def main(
     else:
         # its filename:filename without extension
         mapping = {f.stem: f.stem for f in pcap_files}
-    pcap_files.sort(key=lambda x: x.stat().st_size, reverse=True)
+    pcap_files.sort(key=lambda x: x.stat().st_size, reverse=False)
     for idx, pcap_file in enumerate(pcap_files):
         logger.info(f"Processing {pcap_file.name}...")
 
@@ -249,26 +255,28 @@ def main(
             continue
         df = pd.read_csv(csv_file)
         df.columns = [c.strip() for c in df.columns]
-        ts_format = "%d/%m/%Y %I:%M:%S %p" if dataset_type=='IEC104' else None
-        df[column_mapping.timestamp] = pd.to_datetime(df[column_mapping.timestamp], format=ts_format)
+        ts_format = "%d/%m/%Y %I:%M:%S %p" if dataset_type == "IEC104" else None
+        df[column_mapping.timestamp] = pd.to_datetime(
+            df[column_mapping.timestamp], format=ts_format
+        )
         df[column_mapping.timestamp] = df[column_mapping.timestamp] - pd.Timedelta(
             hours=hours_to_subtract
         )
         df = df.sort_values(by=column_mapping.timestamp, ascending=True)
 
-        logger.info(
-            f"{csv_file} Labels: {df[column_mapping.flow_label].value_counts()}"
-        )
+        # logger.info(f"{df.columns} in CSV file {csv_file.name}")
+
+        logger.info(f"{csv_file} Labels: {df[column_mapping.label].value_counts()}")
 
         def map_label(x):
-            if dataset_type=='ROSIDS':
-                if x == "No Label":
+            if dataset_type == "ROSIDS":
+                if x == "No Label" or str(x) == "0":
                     return "NORMAL"
                 if int(x) == 1:
                     return atk_name
             return x
 
-        df[column_mapping.flow_label] = df[column_mapping.flow_label].apply(map_label)
+        df[column_mapping.label] = df[column_mapping.label].apply(map_label)
         df[column_mapping.total_pkts] = (
             df[column_mapping.tot_fwd_pkts] + df[column_mapping.tot_bwd_pkts]
         )
@@ -279,6 +287,10 @@ def main(
             _max_labeled_pkts = df[column_mapping.total_pkts].quantile(
                 max_labeled_pkts_percentile
             )
+        # for IEC104
+        if "-dosattack" in pcap_file.name:
+            _max_labeled_pkts = 16
+            _min_labeled_pkts = 5
 
         logger.info(f"Total sessions in CSV before filtering: {len(df)}")
         if _min_labeled_pkts > 0:
@@ -288,6 +300,13 @@ def main(
         logger.info(f"Total sessions in CSV after filtering: {len(df)}")
 
         if not completed_df.empty:
+            # logger.info(f"{completed_df.columns} in completed_df")
+            completed_label_counts = completed_df[
+                column_mapping.flow_label
+            ].value_counts()
+            logger.info(
+                f"Completed session label distribution:\n{completed_label_counts}"
+            )
             initial_len = len(df)
             completed_df["session_index"] = completed_df["session_index"]
             completed_indices = set(completed_df["session_index"].unique())
@@ -324,6 +343,7 @@ def main(
             for i in range(0, num_rows, num_rows_per_core)
         ]
         logger.info(f"Created {len(df_chunks)} chunks for processing.")
+
         with multiprocessing.Pool(processes=cpu_cores) as pool:
             pool.starmap(
                 run_extractor,
@@ -342,6 +362,7 @@ def main(
                         write_array,
                         write_image,
                         column_mapping,
+                        write_every,
                     )
                     for process_id, df_chunk in enumerate(df_chunks)
                 ],
@@ -362,6 +383,8 @@ def main(
 
     if compress_to:
         import shutil
+
+        logger.info(f"Compressing processed sessions in {out_dir} to {compress_to}...")
 
         zip_path = Path(compress_to)
         shutil.make_archive(
