@@ -203,7 +203,7 @@ class PacketStreamer:
             t0 = time.time()
             process = subprocess.run(
                 editcap_cmd,
-                capture_output=True,  # FIXED: NO shell=True for lists
+                capture_output=True,
                 text=True,
             )
             t1 = time.time()

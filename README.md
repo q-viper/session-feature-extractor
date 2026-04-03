@@ -60,6 +60,10 @@ See [`examples/session_packet.py`](examples/session_packet.py) for a full demons
 - Converts to numpy arrays (full, per-layer, per-header)
 - Reconstructs packets and sessions from arrays
 - Generates and saves images
+- Tested with following datasets: 
+  - [DNP3 Intrusion Detection Dataset](https://zenodo.org/records/7348493) 
+  - [ROSIDS23](https://zenodo.org/records/10014434)
+  - [IEC104](https://zenodo.org/records/15487636)
 
 ---
 
