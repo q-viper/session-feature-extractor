@@ -28,6 +28,7 @@ A Python package for extracting, reconstructing, and visualizing session-based f
 ```bash
 pip install .
 ```
+Or with PIP: `pip install session-feature-extractor`
 
 - Requires Python 3.10+
 - See `pyproject.toml` for dependencies (scapy, numpy, pandas, opencv-python, loguru, tqdm, etc.)
