@@ -28,4 +28,4 @@ jobs:
         run: isort . --check --diff
 
       - name: Run ruff
-        run: ruff check . --unsafe-fixes false
+        run: ruff check .

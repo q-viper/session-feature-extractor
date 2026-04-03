@@ -39,6 +39,8 @@ def test_extraction_runs_minimal():
                     "1",
                     "--max-samples",
                     "2",
+                    "--max-labeled-pkts-percentile",
+                    "1.0",
                 ],
             )
             assert result.exit_code == 0, result.output
@@ -69,6 +71,8 @@ def test_extraction_creates_labelled_csv():
                     "1",
                     "--max-samples",
                     "2",
+                    "--max-labeled-pkts-percentile",
+                    "1.0",
                 ],
             )
             assert result.exit_code == 0, result.output
@@ -105,6 +109,8 @@ def test_extraction_handles_missing_csv():
                     "1",
                     "--max-samples",
                     "2",
+                    "--max-labeled-pkts-percentile",
+                    "1.0",
                 ],
             )
             assert result.exit_code == 0 or result.exit_code == 1
@@ -140,6 +146,8 @@ def test_extraction_creates_images_and_arrays():
                     "2",
                     "--write-array",
                     "--write-image",
+                    "--max-labeled-pkts-percentile",
+                    "1.0",
                 ],
             )
             assert result.exit_code == 0, result.output

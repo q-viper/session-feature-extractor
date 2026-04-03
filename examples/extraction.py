@@ -69,7 +69,7 @@ def main(
         help="Maximum number of sessions to process from first row (after filtering)",
     ),
     dataset_type: str = typer.Option(
-        "ROSIDS",
+        "DNP3",
         help="Type of dataset to determine column mapping. Options: 'DNP3', 'ROSIDS', 'IEC104'",
     ),
     write_every: int = typer.Option(
