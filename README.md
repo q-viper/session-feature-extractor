@@ -1,4 +1,12 @@
-# Session Feature Extractor (sfe)
+# Session Feature Extractor (SFE)
+
+[![Tests](https://github.com/q-viper/session-feature-extractor/actions/workflows/tests.yml/badge.svg)](https://github.com/q-viper/session-feature-extractor/actions/workflows/tests.yml)
+[![PyPI version](https://img.shields.io/pypi/v/session-feature-extractor.svg)](https://pypi.org/project/session-feature-extractor/)
+[![PyPI Downloads](https://img.shields.io/pypi/dm/session-feature-extractor.svg)](https://pypi.org/project/session-feature-extractor/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![Docs](https://img.shields.io/badge/docs-mkdocs-blue.svg)](https://q-viper.github.io/session-feature-extractor/)
 
 > **Requirements:**
 > - Python 3.10+
