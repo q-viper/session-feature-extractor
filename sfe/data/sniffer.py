@@ -194,8 +194,6 @@ class SessionSniffer:
                     proto,
                 )
 
-        from collections import defaultdict
-
         session_dict = defaultdict(list)
         for pkt in self.packets:
             session_dict[key_func(pkt)].append(pkt)
