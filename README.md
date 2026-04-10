@@ -16,6 +16,8 @@
 
 A Python package for extracting, reconstructing, and visualizing session-based features from network traffic (PCAP files). Designed for research and practical applications in network intrusion detection, traffic analysis, and machine learning.
 
+**Note:** This project has been inspired from [ADVIS-G](https://link.springer.com/article/10.1007/s13218-026-00905-3).
+
 ---
 
 ## Features
