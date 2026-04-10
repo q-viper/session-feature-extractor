@@ -1,10 +1,10 @@
 # Session Feature Extractor (sfe)
 
 > **Requirements:**
-> - Python 3.10+
-> - [scapy](https://scapy.net/) (Python package, see pyproject.toml)
-> - [editcap](https://www.wireshark.org/docs/man-pages/editcap.html) (external tool, for PCAP/PCAPNG conversion)
-> - For HPC/cluster use: [apptainer](https://apptainer.org/) (or Singularity) is recommended for containerized workflows.
+> Python 3.10+
+> [scapy](https://scapy.net/) (Python package, see pyproject.toml)
+> [editcap](https://www.wireshark.org/docs/man-pages/editcap.html) (external tool, for PCAP/PCAPNG conversion)
+> For HPC/cluster use: [apptainer](https://apptainer.org/) (or Singularity) is recommended for containerized workflows.
 
 A Python package for extracting, reconstructing, and visualizing session-based features from network traffic (PCAP files). Designed for research and practical applications in network intrusion detection, traffic analysis, and machine learning.
 
